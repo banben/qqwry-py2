@@ -61,7 +61,6 @@ import array
 import bisect
 import struct
 import socket
-import pdb
 
 __all__ = ('QQwry',)
 
@@ -72,6 +71,7 @@ def int3(data, offset):
 def int4(data, offset):
     return data[offset] + (data[offset+1] << 8) + \
            (data[offset+2] << 16) + (data[offset+3] << 24)
+
 
 class QQwry:
     def __init__(self):
@@ -92,20 +92,19 @@ class QQwry:
     def load_file(self, filename, loadindex=False):
         self.clear()
 
-        if type(filename) == str:
+        if type(filename) == bytes:
+            self.data = buffer = filename
+            filename = 'memory data'
+        elif type(filename) == str:
             # read file
             try:
-                with open(filename, 'rb') as f:
+                with open(filename, 'br') as f:
                     self.data = buffer = f.read()
-                    self.data = [ord(x) for x in buffer]
-                    buffer = self.data
             except Exception as e:
-                print('打开、读取文件时出错：', e)
                 self.clear()
                 return False
 
             if self.data == None:
-                print('%s load failed' % filename)
                 self.clear()
                 return False
         else:
@@ -113,9 +112,6 @@ class QQwry:
             return False
 
         if len(buffer) < 8:
-            print('%s load failed, file only %d bytes' %
-                  (filename, len(buffer))
-                  )
             self.clear()
             return False
 
@@ -125,7 +121,6 @@ class QQwry:
         if index_begin > index_end or \
            (index_end - index_begin) % 7 != 0 or \
            index_end + 7 > len(buffer):
-            print('%s index error' % filename)
             self.clear()
             return False
 
@@ -134,9 +129,6 @@ class QQwry:
         self.index_count = (index_end - index_begin) // 7 + 1
 
         if not loadindex:
-            print('%s %s bytes, %d segments. without index.' %
-                  (filename, format(len(buffer),','), self.index_count)
-                 )
             self.__fun = self.__raw_search
             return True
 
@@ -157,13 +149,9 @@ class QQwry:
                 self.idx2.append(ip_end)
                 self.idxo.append(offset+4)
         except:
-            print('%s load index error' % filename)
             self.clear()
             return False
 
-        print('%s %s bytes, %d segments. with index.' %
-              (filename, format(len(buffer),','), len(self.idx1))
-               )
         self.__fun = self.__index_search
         return True
 
@@ -174,25 +162,19 @@ class QQwry:
             offset = int3(self.data, offset+1)
             mode = self.data[offset]
 
-        print(mode, offset)
-
         # country
         if mode == 2:
             off1 = int3(self.data, offset+1)
-            c = self.data[off1:self.data.index(0, off1)]
+            c = self.data[off1:self.data.index(b'\x00', off1)]
             offset += 4
         else:
-            c = self.data[offset:self.data.index(0, offset)]
+            c = self.data[offset:self.data.index(b'\x00', offset)]
             offset += len(c) + 1
 
         # province
         if self.data[offset] == 2:
             offset = int3(self.data, offset+1)
-        p = self.data[offset:self.data.index(0, offset)]
-
-        c = str(bytearray(c))
-        p = str(bytearray(p))
-        print(c, p)
+        p = self.data[offset:self.data.index(b'\x00', offset)]
 
         return c.decode('gb18030', errors='replace'), \
                p.decode('gb18030', errors='replace')
@@ -256,7 +238,6 @@ if __name__ == '__main__':
 
         for ipstr in sys.argv[1:]:
             s = q.lookup(ipstr)
-            print('%s\n%s' % (ipstr, s))
     else:
         print('请以查询ip作为参数运行')
 
