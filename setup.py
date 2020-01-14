@@ -19,6 +19,8 @@ setup(
     keywords = 'qqwry cz88 纯真 ip归属地',
     platforms=['any'],
     packages=['qqwry'],
+    package_data={'qqwry': ['*.dat']},
+    include_package_data=True,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

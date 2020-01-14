@@ -61,7 +61,7 @@ import array
 import bisect
 import struct
 import socket
-import pdb
+import os
 
 __all__ = ('QQwry',)
 
@@ -91,6 +91,87 @@ class QQwry:
 
     def load_file(self, filename, loadindex=False):
         self.clear()
+
+        if type(filename) == str:
+            # read file
+            try:
+                with open(filename, 'rb') as f:
+                    self.data = buffer = f.read()
+                    self.data = [ord(x) for x in buffer]
+                    buffer = self.data
+            except Exception as e:
+                print('打开、读取文件时出错：', e)
+                self.clear()
+                return False
+
+            if self.data == None:
+                print('%s load failed' % filename)
+                self.clear()
+                return False
+        else:
+            self.clear()
+            return False
+
+        if len(buffer) < 8:
+            print('%s load failed, file only %d bytes' %
+                  (filename, len(buffer))
+                  )
+            self.clear()
+            return False
+
+        # index range
+        index_begin = int4(buffer, 0)
+        index_end = int4(buffer, 4)
+        if index_begin > index_end or \
+           (index_end - index_begin) % 7 != 0 or \
+           index_end + 7 > len(buffer):
+            print('%s index error' % filename)
+            self.clear()
+            return False
+
+        self.index_begin = index_begin
+        self.index_end = index_end
+        self.index_count = (index_end - index_begin) // 7 + 1
+
+        if not loadindex:
+            print('%s %s bytes, %d segments. without index.' %
+                  (filename, format(len(buffer),','), self.index_count)
+                 )
+            self.__fun = self.__raw_search
+            return True
+
+        # load index
+        self.idx1 = array.array('L')
+        self.idx2 = array.array('L')
+        self.idxo = array.array('L')
+
+        try:
+            for i in range(self.index_count):
+                ip_begin = int4(buffer, index_begin + i*7)
+                offset = int3(buffer, index_begin + i*7 + 4)
+
+                # load ip_end
+                ip_end = int4(buffer, offset)
+
+                self.idx1.append(ip_begin)
+                self.idx2.append(ip_end)
+                self.idxo.append(offset+4)
+        except:
+            print('%s load index error' % filename)
+            self.clear()
+            return False
+
+        print('%s %s bytes, %d segments. with index.' %
+              (filename, format(len(buffer),','), len(self.idx1))
+               )
+        self.__fun = self.__index_search
+        return True
+
+    def load_file_inner(self):
+        self.clear()
+
+        filename = os.path.dirname(__file__)+'/qqwry.dat'
+        loadindex = False
 
         if type(filename) == str:
             # read file
