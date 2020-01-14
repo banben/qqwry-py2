@@ -174,8 +174,6 @@ class QQwry:
             offset = int3(self.data, offset+1)
             mode = self.data[offset]
 
-        print(mode, offset)
-
         # country
         if mode == 2:
             off1 = int3(self.data, offset+1)
@@ -192,7 +190,6 @@ class QQwry:
 
         c = str(bytearray(c))
         p = str(bytearray(p))
-        print(c, p)
 
         return c.decode('gb18030', errors='replace'), \
                p.decode('gb18030', errors='replace')
